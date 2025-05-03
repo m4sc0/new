@@ -4,17 +4,45 @@ from image import TemplateImage, load_local_template_image
 from pathlib import Path
 import os
 import argparse
+import datetime
+import getpass
+import platform
+import socket
+import uuid
+
+def get_default_placeholders(project_name: str, template_name: str) -> dict:
+    now = datetime.datetime.now()
+    return {
+        "timestamp": now.strftime("%A, %d. %B %Y %I:%M%p"),
+        "date": now.strftime("%Y-%m-%d"),
+        "year": now.strftime("%Y"),
+        "month": now.strftime("%m"),
+        "day": now.strftime("%d"),
+        "weekday": now.strftime("%A"),
+        "time": now.strftime("%I:%M%p"),
+        "user": getpass.getuser(),
+        "hostname": socket.gethostname(),
+        "os": platform.system(),
+        "template_name": template_name,
+        "project_name": project_name,
+        "project_title": project_name.replace("-", " ").replace("_", " ").title(),
+        "uuid": str(uuid.uuid4()),
+    }
 
 def create_project(metadata: dict, template_path: Path, project_name: str, output_dir: Path):
     target_path = output_dir / project_name
 
-    replacements = {
-        "project_name": project_name
-    }
+    template = metadata.get('template', [])
+    default_placeholders = get_default_placeholders(project_name, template)
 
-    for placeholder in metadata.get("placeholders", []):
-        if placeholder not in replacements:
-            replacements[placeholder] = project_name  # default for now
+    placeholders = set(metadata.get("placeholders", [])) | set(default_placeholders.keys())
+    replacements = {}
+
+    for placeholder in placeholders:
+        if placeholder not in default_placeholders:
+            replacements[placeholder] = input(f"{placeholder}: ")
+        else:
+            replacements[placeholder] = default_placeholders[placeholder]
 
     render_template(template_path, target_path, replacements)
     print(f"Project created at: {target_path}")
