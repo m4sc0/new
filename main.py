@@ -1,18 +1,11 @@
-# custom module imports
 from config import config
 from renderer import render_template
-from template_registry import TemplateRegistry
-
-# other modules
+from image import TemplateImage, load_local_template_image
 from pathlib import Path
 import os
 import argparse
 
-def resolve_template(type_: str, template_name: str):
-    registry = TemplateRegistry(config.get_template_paths())
-    return registry.get_template(type_, template_name)
-
-def create_project(metadata, template_path: Path, project_name: str, output_dir: Path):
+def create_project(metadata: dict, template_path: Path, project_name: str, output_dir: Path):
     target_path = output_dir / project_name
 
     replacements = {
@@ -21,13 +14,11 @@ def create_project(metadata, template_path: Path, project_name: str, output_dir:
 
     for placeholder in metadata.get("placeholders", []):
         if placeholder not in replacements:
-            # In the future: prompt user or load from defaults
-            replacements[placeholder] = project_name
+            replacements[placeholder] = project_name  # default for now
 
     render_template(template_path, target_path, replacements)
     print(f"Project created at: {target_path}")
 
-    # Optionally open the main file
     if config.get_open_main_file() and 'open' in metadata:
         editor = os.environ.get("EDITOR")
         if editor:
@@ -38,36 +29,45 @@ def create_project(metadata, template_path: Path, project_name: str, output_dir:
 def main():
     parser = argparse.ArgumentParser(
         prog='new',
-        description='Create new projects or documents from templates',
-        epilog='More: https://github.com/m4sc0/new'
+        description='Create new projects or documents from template images',
+        epilog='Example: new create project/python:3.10 my-app\\nMore information: https://github.com/m4sc0/new'
     )
 
-    parser.add_argument('type', help="Template category (e.g. project, doc)")
-    parser.add_argument('template', help="Template name (e.g. python)")
-    parser.add_argument('project_name', help="Name of the new project/folder")
+    subparsers = parser.add_subparsers(dest='command', required=True)
 
-    parser.add_argument('-o', '--output', required=False, help="Target directory (default: current directory)")
+    # create parser
+    create_parser = subparsers.add_parser('create', help='Create a project from a template image')
+    create_parser.add_argument('image', help="Template image (e.g. project/python:3.10)")
+    create_parser.add_argument('project_name', help="Target directory / project name")
+    create_parser.add_argument('-o', '--output', required=False, help="Output directory (default: current)")
 
+    # args
     args = parser.parse_args()
 
-    type_ = args.type
-    template = args.template
-    project_name = args.project_name
-    output_dir = Path(args.output).resolve() if args.output else Path.cwd()
+    # conditionals for subparsers
+    if args.command == 'create':
+        try:
+            image = TemplateImage.parse(args.image)
+        except ValueError as e:
+            print(f"{e}")
+            return
 
-    try:
-        metadata, template_path = resolve_template(type_, template)
-    except FileNotFoundError as e:
-        print(f"{e}")
-        return
+        output_dir = Path(args.output).resolve() if args.output else Path.cwd()
+        project_name = args.project_name
 
-    print(f"Creating '{metadata['name']}' from: {template_path}")
-    print(f"Placeholders: {metadata.get('placeholders', [])}")
+        try:
+            metadata, template_path = load_local_template_image(image)
+        except Exception as e:
+            print(f"Failed to load image {image}: {e}")
+            return
 
-    try:
-        create_project(metadata, template_path, project_name, output_dir)
-    except FileExistsError:
-        print(f"Project directory '{(output_dir / project_name)}' already exists.")
+        print(f"Using template '{image}' from: {template_path}")
+        print(f"Placeholders: {metadata.get('placeholders', [])}")
+
+        try:
+            create_project(metadata, template_path, project_name, output_dir)
+        except FileExistsError:
+            print(f"Project directory '{(output_dir / project_name)}' already exists.")
 
 if __name__ == "__main__":
     main()
