@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 
 class TemplateImage:
     def __init__(self, category: str, name: str, version: str) -> None:
@@ -48,3 +48,32 @@ def load_local_template_image(image: TemplateImage) -> Tuple[dict, Path]:
         raise ValueError(f"Invalid template.json in image {image.id()}")
 
     return metadata, path
+
+def list_local_images() -> List[TemplateImage]:
+    root = Path.home() / ".cache" / "new" / "templates"
+    found = []
+
+    if not root.exists():
+        return found
+
+    for category_dir in root.iterdir():
+        if not category_dir.is_dir():
+            continue
+
+        for name_dir in category_dir.iterdir():
+            if not name_dir.is_dir():
+                continue
+
+            for version_dir in name_dir.iterdir():
+                if not version_dir.is_dir():
+                    continue
+
+                template_json = version_dir / "template.json"
+                if template_json.exists():
+                    found.append(TemplateImage(
+                        category=category_dir.name,
+                        name=name_dir.name,
+                        version=version_dir.name
+                        ))
+
+    return found

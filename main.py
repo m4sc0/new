@@ -69,6 +69,11 @@ def main():
     create_parser.add_argument('project_name', help="Target directory / project name")
     create_parser.add_argument('-o', '--output', required=False, help="Output directory (default: current)")
 
+    # list parser
+
+    list_parser = subparsers.add_parser('list', help='List local or remote templates')
+    list_parser.add_argument('origin', choices=['local','remote'], default='local', const='local', nargs='?')
+
     # args
     args = parser.parse_args()
 
@@ -96,6 +101,18 @@ def main():
             create_project(metadata, template_path, project_name, output_dir)
         except FileExistsError:
             print(f"Project directory '{(output_dir / project_name)}' already exists.")
+    elif args.command == 'list':
+        if args.origin == "local":
+            from image import list_local_images
+            images = list_local_images()
+            if not images:
+                print("No local templates found")
+                return
+            print("Available local templates:")
+            for img in images:
+                print(f" - {img}")
+        else:
+            print("Listing remote templates is not implemented yet")
 
 if __name__ == "__main__":
     main()
