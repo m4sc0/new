@@ -1,89 +1,132 @@
 # `new`
 
-A CLI tool to create new projects or files from templates
+A CLI tool to create new projects or files from versioned template images.
 
-`new` is a simple command-line interface utility for quickly generating new project folders or files from starter templates
+`new` is a fast and minimal command-line tool for generating new projects or files using local or remote templates. It uses a Docker-style image system (e.g. `project/python:3.10`) and supports dynamic placeholders.
 
----
 
-## Features
 
-- Create new projects using templates
-```bash
-new project python my-app
-```
-- Generate documents quickly
-```bash
-new doc meeting-notes
-```
-- Built-in and user-defined templates
-- Placeholder replacement (e.g. `{{project_name}}`)
-- Configurable and extensible structure
+## 🚀 Features
 
-## Installation
+- Create new projects from versioned template **images**
+- Fully supports **local template cache**
+- Placeholder replacement with system metadata and user prompts
+- `$EDITOR` integration to open files automatically after creation
+- Future-ready for **remote registry support**, **template builds**, and **pulling**
 
-Clone the repo and install as a local CLI tool (symlink or wrapper script)
+
+
+## 📦 Installation
+
+Clone the repository and run using a wrapper script or install via symlink:
 
 ```bash
 git clone https://github.com/m4sc0/new.git
-# optional: add `new` to your PATH
+cd new
+python -m main.py create project/python:3.10 my-app
 ```
 
-## Template Structure
-
-Templates live in either the built-in `templates/` directory or your user folder at
-
-```
-~/.config/new/templates/
-```
-
-Example layout
-```
-templates/
-├── project/
-│   └── python/
-│       ├── template.json
-│       ├── main.py
-│       └── README.md
-└── doc/
-    └── default/
-        ├── template.json
-        └── note.md
-```
-
-## Commands
-
-### Create a new project
+You can also use a wrapper script to add this to your `$PATH`
 
 ```bash
-new project <type> <name>
+#!/bin/bash
+
+python3 -m /path/to/repo/main.py $@
 ```
 
-Creates a new folder from the specified project type
+The feature of a complete cli to download will come in the future
 
-### Create a new document
+## 🧱 Template Structure
 
-```bash
-new doc <name>
+Templates are cached locally under:
+
+```
+~/.cache/new/templates/
 ```
 
-Creates a single file using a template (e.g. a Markdown note)
+Example structure:
+```
+~/.cache/new/templates/
+└── project/
+    └── python/
+        └── 3.10/
+            ├── template.json
+            ├── main.py
+            └── README.md
+```
 
-## Template configuration
+Each template must include a `template.json` file with metadata.
 
-Each template folder contains a `template.json` file that defines how placeholders are handled and which files to include
-
-Example `template.json`
+Example `template.json`:
 ```json
 {
-    "placeholders": ["project_name"],
+  "name": "Python CLI App",
+  "category": "project",
+  "version": "3.10",
+  "placeholders": ["project_name"],
+  "open": "main.py"
 }
 ```
 
-# TODO / Coming Soon
 
-- User-defined templates inf `~/.config/new`
-- `new list` to show available templates
-- Placeholder prompting (`{{author}}`, `{{year}}`)
-- Git-based template cloning
-- Configurable default values
+
+## 📚 Usage
+
+### Create a project from an image
+
+```bash
+new create project/python:3.10 my-app
+```
+
+This renders the template into `./my-app`, replacing placeholders and optionally opening the main file in `$EDITOR`.
+
+
+
+### List local templates
+
+```bash
+new list local
+```
+
+Output:
+```
+Available local templates:
+ - project/python:3.10
+ - doc/markdown:latest
+```
+
+
+
+## 🔁 Placeholder System
+
+Placeholders like `{{project_name}}`, `{{user}}`, `{{date}}`, etc., are automatically replaced.
+
+Default values include:
+- `project_name`, `template_name`, `project_title`
+- `timestamp`, `year`, `month`, `day`, `weekday`, `time`
+- `user`, `hostname`, `uuid`, `os`
+
+Any undefined placeholders will be prompted for interactively.
+
+
+
+## 🛠 Planned Features
+
+- `new pull <image>` to fetch templates from a remote registry
+- `new build` to create and version templates from local folders
+- `new list remote` to query hosted registries
+- JSON schema validation for `template.json`
+- Global config overrides
+
+
+
+## ❤️ Contributing
+
+PRs, template contributions, and ideas are welcome.
+
+
+
+## 📄 License
+
+MIT
+
