@@ -18,6 +18,9 @@ def render_template(template_path: Path, target_path: Path, replacements: Dict[s
         rendered_path.mkdir(parents=True, exist_ok=True)
 
         for file in files:
+            if file == "template.json":
+                continue
+
             src_file = Path(root) / file
             dest_file_name = apply_replacements(file, replacements)
             dest_file_path = rendered_path / dest_file_name
