@@ -14,6 +14,30 @@ import uuid
 
 from template_metadata import TemplateMetadata
 
+def list_local_templates():
+    from image import list_local_images
+    images = list_local_images()
+    if not images:
+        print("No local templates found")
+        return
+    print("Available local templates:")
+    for img in images:
+        print(f" - {img}")
+
+def list_remote_templates():
+    from remote import list_remote_templates
+
+    templates = list_remote_templates(config.get_remote_url())
+
+    if templates:
+        print("Available remote templates")
+        for x in templates:
+            print(f" - {x.id()}")
+    else:
+        print("No remote templates found")
+
+
+
 def get_default_placeholders(project_name: str, template_name: str) -> dict:
     now = datetime.datetime.now()
     return {
@@ -76,7 +100,7 @@ def main():
     # list parser
 
     list_parser = subparsers.add_parser('list', help='List local or remote templates')
-    list_parser.add_argument('origin', choices=['local','remote'], default='local', const='local', nargs='?')
+    list_parser.add_argument('origin', choices=['local','remote','all'], default='local', const='local', nargs='?')
 
     # build parser
 
@@ -128,33 +152,12 @@ def main():
             print(f"Project directory '{(output_dir / project_name)}' already exists.")
     elif args.command == 'list':
         if args.origin == "local":
-            # local templates
-            from image import list_local_images
-            images = list_local_images()
-            if not images:
-                print("No local templates found")
-                return
-            print("Available local templates:")
-            for img in images:
-                print(f" - {img}")
-
-            # remote templates
-            from remote import list_remote_templates
-
-            templates = list_remote_templates(config.get_remote_url())
-
-            print("Available remote templates")
-            for x in templates:
-                print(f" - {x.id()}")
+            list_local_templates()
+        elif args.origin == "remote":
+            list_remote_templates()
         else:
-            from remote import list_remote_templates
-
-            templates = list_remote_templates(config.get_remote_url())
-
-            print("Available remote templates")
-            for x in templates:
-                print(f" - {x.id()}")
-
+            list_local_templates()
+            list_remote_templates()
     elif args.command == 'build':
         try:
             image = TemplateImage.parse(args.image)
