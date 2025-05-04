@@ -6,7 +6,8 @@ from typing import List
 CONFIG_PATH = Path.home() / ".config" / "new" / "config.json"
 DEFAULT_CONFIG = {
     "template_paths": [],
-    "open_main_file": False
+    "open_main_file": False,
+    "remote": "https://repo.new.kackhost.de"
 }
 
 class Config:
@@ -49,6 +50,13 @@ class Config:
 
     def set_open_main_file(self, value: bool):
         self._config["open_main_file"] = value
+        self._write()
+
+    def get_remote_url(self) -> str:
+        return self._config.get("remote", DEFAULT_CONFIG["remote"])
+
+    def set_remote_url(self, url: str):
+        self._config["remote"] = url
         self._write()
 
     def reload(self):

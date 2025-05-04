@@ -1,4 +1,5 @@
 from config import config
+import remote
 from renderer import render_template
 from image import TemplateImage, load_local_template_image
 from builder import build_template
@@ -86,6 +87,12 @@ def main():
     build_parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
     build_parser.add_argument('--dry-run', action='store_true', help='Show what would happen without creating/modifying anything')
 
+    # pull parser
+
+    pull_parser = subparsers.add_parser('pull', help='Pull a template image from remote')
+    pull_parser.add_argument('image', help='Template image (e.g. project/python:3.10)')
+    pull_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+
     # args
     args = parser.parse_args()
 
@@ -143,6 +150,23 @@ def main():
             )
         except Exception as e:
             print(f"Failed to build image: {e}")
+    elif args.command == 'pull':
+        from remote import pull_template, fetch_metadata
+
+        try:
+            image = TemplateImage.parse(args.image)
+        except ValueError as e:
+            print(f"{e}")
+            return
+
+        remote_url = config.get_remote_url()
+
+        try:
+            print(f"Pulling {image} from {remote_url}...")
+            pull_template(remote_url, image, verbose=args.verbose)
+            print("Done.")
+        except Exception as e:
+            print(f"Failed to pull image: {e}")
 
 if __name__ == "__main__":
     main()
