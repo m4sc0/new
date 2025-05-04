@@ -26,7 +26,7 @@ class TemplateImage:
         return self.id()
 
 def get_local_image_path(image: TemplateImage) -> Path:
-    return Path.home() / ".cache" / "new" / "images" / image.category / image.name / image.version
+    return Path.home() / ".cache" / "new" / "templates" / image.category / image.name / image.version
 
 def load_local_template_image(image: TemplateImage) -> Tuple[TemplateMetadata, Path]:
     path = get_local_image_path(image)
@@ -37,7 +37,7 @@ def load_local_template_image(image: TemplateImage) -> Tuple[TemplateMetadata, P
     return metadata, path
 
 def list_local_images() -> List[TemplateImage]:
-    root = Path.home() / ".cache" / "new" / "images"
+    root = Path.home() / ".cache" / "new" / "templates"
     found = []
     if not root.exists():
         return found
