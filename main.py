@@ -93,6 +93,12 @@ def main():
     pull_parser.add_argument('image', help='Template image (e.g. project/python:3.10)')
     pull_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
 
+    # push parser
+
+    push_parser = subparsers.add_parser('push', help='Upload a local cached template to the registry')
+    push_parser.add_argument('image', help='Template image reference (e.g. project/python:3.10)')
+    push_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+
     # args
     args = parser.parse_args()
 
@@ -122,6 +128,7 @@ def main():
             print(f"Project directory '{(output_dir / project_name)}' already exists.")
     elif args.command == 'list':
         if args.origin == "local":
+            # local templates
             from image import list_local_images
             images = list_local_images()
             if not images:
@@ -130,8 +137,24 @@ def main():
             print("Available local templates:")
             for img in images:
                 print(f" - {img}")
+
+            # remote templates
+            from remote import list_remote_templates
+
+            templates = list_remote_templates(config.get_remote_url())
+
+            print("Available remote templates")
+            for x in templates:
+                print(f" - {x.id()}")
         else:
-            print("Listing remote templates is not implemented yet")
+            from remote import list_remote_templates
+
+            templates = list_remote_templates(config.get_remote_url())
+
+            print("Available remote templates")
+            for x in templates:
+                print(f" - {x.id()}")
+
     elif args.command == 'build':
         try:
             image = TemplateImage.parse(args.image)
@@ -167,6 +190,21 @@ def main():
             print("Done.")
         except Exception as e:
             print(f"Failed to pull image: {e}")
+    elif args.command == 'push':
+        from remote import upload_template
+
+        try:
+            image = TemplateImage.parse(args.image)
+        except ValueError as e:
+            print(f"{e}")
+            return
+
+        remote_url = config.get_remote_url()
+
+        try:
+            upload_template(remote_url, image, verbose=args.verbose)
+        except Exception as e:
+            print(f"Upload failed: {e}")
 
 if __name__ == "__main__":
     main()
