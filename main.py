@@ -1,6 +1,7 @@
 from config import config
 from renderer import render_template
 from image import TemplateImage, load_local_template_image
+from builder import build_template
 from pathlib import Path
 import os
 import argparse
@@ -74,6 +75,15 @@ def main():
     list_parser = subparsers.add_parser('list', help='List local or remote templates')
     list_parser.add_argument('origin', choices=['local','remote'], default='local', const='local', nargs='?')
 
+    # build parser
+
+    build_parser = subparsers.add_parser('build', help='Build a local template image from a folder')
+    build_parser.add_argument('image', help='Image reference (e.g. project/python:3.10)')
+    build_parser.add_argument('source', help='Path to the source folder')
+    build_parser.add_argument('-f', '--force', action='store_true', help='Overwrite if template exists already')
+    build_parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
+    build_parser.add_argument('--dry-run', action='store_true', help='Show what would happen without creating/modifying anything')
+
     # args
     args = parser.parse_args()
 
@@ -113,6 +123,24 @@ def main():
                 print(f" - {img}")
         else:
             print("Listing remote templates is not implemented yet")
+    elif args.command == 'build':
+        try:
+            image = TemplateImage.parse(args.image)
+        except ValueError as e:
+            print(f"{e}")
+            return
+
+        source_path = Path(args.source).resolve()
+        try:
+            build_template(
+                image=image,
+                source_path=source_path,
+                force=args.force,
+                dry_run=args.dry_run,
+                verbose=args.verbose
+            )
+        except Exception as e:
+            print(f"Failed to build image: {e}")
 
 if __name__ == "__main__":
     main()

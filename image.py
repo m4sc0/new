@@ -29,7 +29,7 @@ class TemplateImage:
         return self.id()
 
 def get_local_image_path(image: TemplateImage) -> Path:
-    return Path.home() / ".cache" / "new" / "images" / image.category / image.name / image.version
+    return Path.home() / ".cache" / "new" / "templates" / image.category / image.name / image.version
 
 def load_local_template_image(image: TemplateImage) -> Tuple[dict, Path]:
     """
