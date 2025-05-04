@@ -129,7 +129,7 @@ def main():
     # conditionals for subparsers
     if args.command == 'create':
         try:
-            image = TemplateImage.parse(args.image)
+            image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
             print(f"{e}")
             return
@@ -160,7 +160,7 @@ def main():
             list_remote_templates()
     elif args.command == 'build':
         try:
-            image = TemplateImage.parse(args.image)
+            image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
             print(f"{e}")
             return
@@ -180,7 +180,7 @@ def main():
         from remote import pull_template, fetch_metadata
 
         try:
-            image = TemplateImage.parse(args.image)
+            image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
             print(f"{e}")
             return
@@ -197,7 +197,7 @@ def main():
         from remote import upload_template
 
         try:
-            image = TemplateImage.parse(args.image)
+            image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
             print(f"{e}")
             return

@@ -1,6 +1,13 @@
 from pathlib import Path
 from typing import Tuple, List
 from template_metadata import TemplateMetadata
+from packaging.version import Version, InvalidVersion
+
+def safe_version(v: str):
+    try:
+        return Version(v)
+    except InvalidVersion:
+        return Version("0.0.0")
 
 class TemplateImage:
     def __init__(self, category: str, name: str, version: str) -> None:
@@ -9,15 +16,35 @@ class TemplateImage:
         self.version = version
 
     @classmethod
-    def parse(cls, ref: str):
-        if ':' not in ref:
+    def parse(cls, ref: str, allow_missing_version: bool = False):
+        if ':' in ref:
+            path, version = ref.split(':', 1)
+            parts = path.split('/')
+            if len(parts) != 2:
+                raise ValueError(f"Invalid image reference: '{ref}' (expected category/name)")
+            category, name = parts
+            return cls(category, name, version)
+        
+        if not allow_missing_version:
             raise ValueError(f"Invalid image reference: '{ref}' (missing version)")
-        path, version = ref.split(':', 1)
-        parts = path.split('/')
+
+        # Infer latest version
+        parts = ref.split('/')
         if len(parts) != 2:
             raise ValueError(f"Invalid image reference: '{ref}' (expected category/name)")
         category, name = parts
-        return cls(category, name, version)
+
+        root = Path.home() / ".cache" / "new" / "templates" / category / name
+        if not root.exists():
+            raise FileNotFoundError(f"No template found for: {ref}")
+
+        versions = sorted([p.name for p in root.iterdir() if p.is_dir()], key=safe_version)
+        if not versions:
+            raise FileNotFoundError(f"No versions found for: {ref}")
+
+        print(versions)
+        latest_version = versions[-1]
+        return cls(category, name, latest_version)
 
     def id(self) -> str:
         return f"{self.category}/{self.name}:{self.version}"

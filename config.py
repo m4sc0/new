@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import os
 from pathlib import Path
@@ -7,7 +8,8 @@ CONFIG_PATH = Path.home() / ".config" / "new" / "config.json"
 DEFAULT_CONFIG = {
     "template_paths": [],
     "open_main_file": False,
-    "remote": "https://repo.new.kackhost.de"
+    "remote": "https://repo.new.kackhost.de",
+    "allow_missing_version": True
 }
 
 class Config:
@@ -57,6 +59,13 @@ class Config:
 
     def set_remote_url(self, url: str):
         self._config["remote"] = url
+        self._write()
+
+    def get_allow_missing_version(self) -> bool:
+        return self._config.get("allow_missing_version", DEFAULT_CONFIG["allow_missing_version"])
+
+    def set_allow_missing_version(self, allow: bool):
+        self._config["allow_missing_version"] = allow
         self._write()
 
     def reload(self):

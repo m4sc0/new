@@ -14,6 +14,7 @@ def build_template(image: TemplateImage, source_path: Path, force: bool = False,
 
     metadata = TemplateMetadata.load(original_metadata_path)
     metadata.category = image.category
+    metadata.name = image.name
     metadata.version = image.version
 
     target_path = get_local_image_path(image)
