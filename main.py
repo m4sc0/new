@@ -11,6 +11,8 @@ import platform
 import socket
 import uuid
 
+from template_metadata import TemplateMetadata
+
 def get_default_placeholders(project_name: str, template_name: str) -> dict:
     now = datetime.datetime.now()
     return {
@@ -30,13 +32,13 @@ def get_default_placeholders(project_name: str, template_name: str) -> dict:
         "uuid": str(uuid.uuid4()),
     }
 
-def create_project(metadata: dict, template_path: Path, project_name: str, output_dir: Path):
+def create_project(metadata: TemplateMetadata, template_path: Path, project_name: str, output_dir: Path):
     target_path = output_dir / project_name
 
-    template = metadata.get('template', [])
+    template = metadata.template()
     default_placeholders = get_default_placeholders(project_name, template)
 
-    placeholders = set(metadata.get("placeholders", [])) | set(default_placeholders.keys())
+    placeholders = set(metadata.placeholders) | set(default_placeholders.keys())
     replacements = {}
 
     for placeholder in placeholders:
@@ -48,10 +50,10 @@ def create_project(metadata: dict, template_path: Path, project_name: str, outpu
     render_template(template_path, target_path, replacements)
     print(f"Project created at: {target_path}")
 
-    if config.get_open_main_file() and 'open' in metadata:
+    if config.get_open_main_file() and metadata.open != None:
         editor = os.environ.get("EDITOR")
         if editor:
-            file_to_open = target_path / metadata['open']
+            file_to_open = target_path / metadata.open
             print(f"Opening {file_to_open} in $EDITOR...")
             os.system(f"{editor} {file_to_open}")
 
@@ -105,7 +107,7 @@ def main():
             return
 
         print(f"Using template '{image}' from: {template_path}")
-        print(f"Placeholders: {metadata.get('placeholders', [])}")
+        print(f"Placeholders: {metadata.placeholders}")
 
         try:
             create_project(metadata, template_path, project_name, output_dir)
