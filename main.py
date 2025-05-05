@@ -11,32 +11,52 @@ import getpass
 import platform
 import socket
 import uuid
-
 from template_metadata import TemplateMetadata
 
-def list_local_templates():
-    from image import list_local_images
-    images = list_local_images()
-    if not images:
-        print("No local templates found")
-        return
-    print("Available local templates:")
-    for img in images:
-        print(f" - {img}")
+from rich.tree import Tree
+from image import list_local_images
+from remote import list_remote_templates
+from output import info, success, warning, error, verbose, print_tree, prompt
 
-def list_remote_templates():
-    from remote import list_remote_templates
+def list_templates(origin: str):
+    if origin in ("local", "all"):
+        templates = list_local_images()
+        if not templates:
+            warning("No local templates found")
+        else:
+            tree = Tree("[bold green]Local Templates[/bold green]")
+            grouped = {}
+            for t in templates:
+                grouped.setdefault(t.category, {}).setdefault(t.name, []).append(t.version)
+            for cat, names in sorted(grouped.items()):
+                cat_node = tree.add(f"[cyan]{cat}/[/cyan]")
+                for name, versions in sorted(names.items()):
+                    name_node = cat_node.add(f"[white]{name}[/white]")
+                    for version in sorted(versions, key=lambda v: v, reverse=True):
+                        name_node.add(f"[dim]{version}[/dim]")
+            print_tree(tree)
 
-    templates = list_remote_templates(config.get_remote_url())
+    if origin in ("remote", "all"):
+        try:
+            templates = list_remote_templates(config.get_remote_url())
+        except Exception as e:
+            error(f"Failed to fetch remote templates: {e}")
+            return
 
-    if templates:
-        print("Available remote templates")
-        for x in templates:
-            print(f" - {x.id()}")
-    else:
-        print("No remote templates found")
-
-
+        if not templates:
+            warning("No remote templates found")
+        else:
+            tree = Tree("[bold blue]Remote Templates[/bold blue]")
+            grouped = {}
+            for t in templates:
+                grouped.setdefault(t.category, {}).setdefault(t.name, []).append(t.version)
+            for cat, names in sorted(grouped.items()):
+                cat_node = tree.add(f"[cyan]{cat}/[/cyan]")
+                for name, versions in sorted(names.items()):
+                    name_node = cat_node.add(f"[white]{name}[/white]")
+                    for version in sorted(versions, key=lambda v: v, reverse=True):
+                        name_node.add(f"[dim]{version}[/dim]")
+            print_tree(tree)
 
 def get_default_placeholders(project_name: str, template_name: str) -> dict:
     now = datetime.datetime.now()
@@ -59,27 +79,24 @@ def get_default_placeholders(project_name: str, template_name: str) -> dict:
 
 def create_project(metadata: TemplateMetadata, template_path: Path, project_name: str, output_dir: Path):
     target_path = output_dir / project_name
-
     template = metadata.template()
     default_placeholders = get_default_placeholders(project_name, template)
-
     placeholders = set(metadata.placeholders) | set(default_placeholders.keys())
     replacements = {}
-
     for placeholder in placeholders:
         if placeholder not in default_placeholders:
-            replacements[placeholder] = input(f"{placeholder}: ")
+            replacements[placeholder] = prompt(f"{placeholder}")
         else:
             replacements[placeholder] = default_placeholders[placeholder]
 
     render_template(template_path, target_path, replacements)
-    print(f"Project created at: {target_path}")
+    success(f"Project created at: {target_path}")
 
-    if config.get_open_main_file() and metadata.open != None:
+    if config.get_open_main_file() and metadata.open:
         editor = os.environ.get("EDITOR")
         if editor:
             file_to_open = target_path / metadata.open
-            print(f"Opening {file_to_open} in $EDITOR...")
+            info(f"Opening {file_to_open} in $EDITOR...")
             os.system(f"{editor} {file_to_open}")
 
 def main():
@@ -88,7 +105,6 @@ def main():
         description='Create new projects or documents from template images',
         epilog='Example: new create project/python:3.10 my-app\\nMore information: https://github.com/m4sc0/new'
     )
-
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     # create parser
@@ -118,12 +134,10 @@ def main():
     pull_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
 
     # push parser
+    push_parser = subparsers.add_parser('push')
+    push_parser.add_argument('image')
+    push_parser.add_argument('-v', '--verbose', action='store_true')
 
-    push_parser = subparsers.add_parser('push', help='Upload a local cached template to the registry')
-    push_parser.add_argument('image', help='Template image reference (e.g. project/python:3.10)')
-    push_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
-
-    # args
     args = parser.parse_args()
 
     # conditionals for subparsers
@@ -131,7 +145,7 @@ def main():
         try:
             image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
-            print(f"{e}")
+            error(str(e))
             return
 
         output_dir = Path(args.output).resolve() if args.output else Path.cwd()
@@ -140,31 +154,24 @@ def main():
         try:
             metadata, template_path = load_local_template_image(image)
         except Exception as e:
-            print(f"Failed to load image {image}: {e}")
+            error(f"Failed to load image {image}: {e}")
             return
-
-        print(f"Using template '{image}' from: {template_path}")
-        print(f"Placeholders: {metadata.placeholders}")
-
+        info(f"Using template '{image}' from: {template_path}")
+        info(f"Placeholders: {metadata.placeholders}")
         try:
             create_project(metadata, template_path, project_name, output_dir)
         except FileExistsError:
-            print(f"Project directory '{(output_dir / project_name)}' already exists.")
+            error(f"Project directory '{(output_dir / project_name)}' already exists.")
+
     elif args.command == 'list':
-        if args.origin == "local":
-            list_local_templates()
-        elif args.origin == "remote":
-            list_remote_templates()
-        else:
-            list_local_templates()
-            list_remote_templates()
+        list_templates(args.origin)
+
     elif args.command == 'build':
         try:
             image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
-            print(f"{e}")
+            error(str(e))
             return
-
         source_path = Path(args.source).resolve()
         try:
             build_template(
@@ -175,39 +182,35 @@ def main():
                 verbose=args.verbose
             )
         except Exception as e:
-            print(f"Failed to build image: {e}")
-    elif args.command == 'pull':
-        from remote import pull_template, fetch_metadata
+            error(f"Failed to build image: {e}")
 
+    elif args.command == 'pull':
+        from remote import pull_template
         try:
             image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
-            print(f"{e}")
+            error(str(e))
             return
-
         remote_url = config.get_remote_url()
-
         try:
-            print(f"Pulling {image} from {remote_url}...")
+            info(f"Pulling {image} from {remote_url}...")
             pull_template(remote_url, image, verbose=args.verbose)
-            print("Done.")
+            success("Done.")
         except Exception as e:
-            print(f"Failed to pull image: {e}")
+            error(f"Failed to pull image: {e}")
+
     elif args.command == 'push':
         from remote import upload_template
-
         try:
             image = TemplateImage.parse(args.image, config.get_allow_missing_version())
         except ValueError as e:
-            print(f"{e}")
+            error(str(e))
             return
-
         remote_url = config.get_remote_url()
-
         try:
             upload_template(remote_url, image, verbose=args.verbose)
         except Exception as e:
-            print(f"Upload failed: {e}")
+            error(f"Upload failed: {e}")
 
 if __name__ == "__main__":
     main()
