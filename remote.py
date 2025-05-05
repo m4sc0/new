@@ -6,7 +6,7 @@ from image import TemplateImage, get_local_image_path
 from template_metadata import TemplateMetadata
 from getpass import getpass
 from typing import List
-
+from config import config
 
 def fetch_metadata(remote_url: str, image: TemplateImage) -> TemplateMetadata:
     url = f"{remote_url}/meta/{image.category}/{image.name}/{image.version}"
@@ -69,7 +69,13 @@ def upload_template(remote_url: str, image: TemplateImage, verbose: bool = False
     metadata = TemplateMetadata.load(metadata_path)
 
     zip_bytes = zip_template_folder(path)
-    token = getpass("Upload token: ")
+
+    token_valid, token_config = config.get_upload_token()
+
+    if not token_valid:
+        token = getpass("Upload token: ")
+    else:
+        token = token_config
 
     if verbose:
         print(f"Uploading {image} to {remote_url}...")

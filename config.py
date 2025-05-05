@@ -2,14 +2,15 @@ from collections import defaultdict
 import json
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 CONFIG_PATH = Path.home() / ".config" / "new" / "config.json"
 DEFAULT_CONFIG = {
     "template_paths": [],
     "open_main_file": False,
     "remote": "https://repo.new.kackhost.de",
-    "allow_missing_version": True
+    "allow_missing_version": True,
+    "upload_token": "no-token"
 }
 
 class Config:
@@ -25,6 +26,10 @@ class Config:
         else:
             with CONFIG_PATH.open("r") as f:
                 self._config = json.load(f)
+            for k, v in DEFAULT_CONFIG.items():
+                if k not in self._config:
+                    self._config[k] = v
+            self._write()
 
     def _write(self):
         with CONFIG_PATH.open("w") as f:
@@ -66,6 +71,16 @@ class Config:
 
     def set_allow_missing_version(self, allow: bool):
         self._config["allow_missing_version"] = allow
+        self._write()
+
+    def get_upload_token(self):
+        token = self._config.get("upload_token", "no-token")
+        if token == "no-token":
+            return False, ""
+        return True, token
+
+    def set_upload_token(self, token: str):
+        self._config["upload_token"] = token
         self._write()
 
     def reload(self):
