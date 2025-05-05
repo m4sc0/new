@@ -16,25 +16,15 @@ from template_metadata import TemplateMetadata
 from rich.tree import Tree
 from image import list_local_images
 from remote import list_remote_templates
-from output import info, success, warning, error, verbose, print_tree, prompt
+from output import info, print_template_output, success, warning, error, verbose, print_template_tree, prompt
 
-def list_templates(origin: str):
+def list_templates(origin: str, output: str = 'tree'):
     if origin in ("local", "all"):
         templates = list_local_images()
         if not templates:
             warning("No local templates found")
         else:
-            tree = Tree("[bold green]Local Templates[/bold green]")
-            grouped = {}
-            for t in templates:
-                grouped.setdefault(t.category, {}).setdefault(t.name, []).append(t.version)
-            for cat, names in sorted(grouped.items()):
-                cat_node = tree.add(f"[cyan]{cat}/[/cyan]")
-                for name, versions in sorted(names.items()):
-                    name_node = cat_node.add(f"[white]{name}[/white]")
-                    for version in sorted(versions, key=lambda v: v, reverse=True):
-                        name_node.add(f"[dim]{version}[/dim]")
-            print_tree(tree)
+            print_template_output(templates, "local", output)
 
     if origin in ("remote", "all"):
         try:
@@ -46,17 +36,7 @@ def list_templates(origin: str):
         if not templates:
             warning("No remote templates found")
         else:
-            tree = Tree("[bold blue]Remote Templates[/bold blue]")
-            grouped = {}
-            for t in templates:
-                grouped.setdefault(t.category, {}).setdefault(t.name, []).append(t.version)
-            for cat, names in sorted(grouped.items()):
-                cat_node = tree.add(f"[cyan]{cat}/[/cyan]")
-                for name, versions in sorted(names.items()):
-                    name_node = cat_node.add(f"[white]{name}[/white]")
-                    for version in sorted(versions, key=lambda v: v, reverse=True):
-                        name_node.add(f"[dim]{version}[/dim]")
-            print_tree(tree)
+            print_template_output(templates, "remote", output)
 
 def get_default_placeholders(project_name: str, template_name: str) -> dict:
     now = datetime.datetime.now()
@@ -117,6 +97,7 @@ def main():
 
     list_parser = subparsers.add_parser('list', help='List local or remote templates')
     list_parser.add_argument('origin', choices=['local','remote','all'], default='local', const='local', nargs='?')
+    list_parser.add_argument('--output', choices=['tree','table','quiet'], default='tree', const='tree', nargs='?')
 
     # build parser
 
@@ -164,7 +145,7 @@ def main():
             error(f"Project directory '{(output_dir / project_name)}' already exists.")
 
     elif args.command == 'list':
-        list_templates(args.origin)
+        list_templates(args.origin, args.output)
 
     elif args.command == 'build':
         try:
