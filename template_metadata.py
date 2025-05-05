@@ -11,7 +11,10 @@ class TemplateMetadata:
         placeholders: Optional[List[str]] = None,
         open_file: Optional[str] = None,
         category: Optional[str] = None,
-        version: Optional[str] = None
+        version: Optional[str] = None,
+        created: Optional[str] = None,
+        hash: Optional[str] = None,
+        size: Optional[int] = None,
     ) -> None:
         self.name = name
         self.description = description
@@ -19,6 +22,9 @@ class TemplateMetadata:
         self.open = open_file
         self.category = category
         self.version = version
+        self.created = created
+        self.hash = hash
+        self.size = size
 
     @classmethod
     def load(cls, path: Path) -> "TemplateMetadata":
@@ -34,7 +40,10 @@ class TemplateMetadata:
             placeholders=data.get("placeholders", []),
             open_file=data.get("open"),
             category=data.get("category"),
-            version=data.get("version")
+            version=data.get("version"),
+            created=data.get("created"),
+            hash=data.get("hash"),
+            size=data.get("size"),
         )
 
     def template(self) -> str:
@@ -47,7 +56,10 @@ class TemplateMetadata:
             "placeholders": self.placeholders,
             "open": self.open,
             "category": self.category,
-            "version": self.version
+            "version": self.version,
+            "created": self.created,
+            "hash": self.hash,
+            "size": self.size,
         }
 
     def save(self, path: Path):

@@ -1,8 +1,9 @@
 import shutil
 import os
 from pathlib import Path
-from image import TemplateImage, get_local_image_path
+from image import TemplateImage, get_local_image_path, compute_template_hash
 from template_metadata import TemplateMetadata
+from datetime import datetime
 
 def build_template(image: TemplateImage, source_path: Path, force: bool = False, dry_run: bool = False, verbose: bool = False):
     if not source_path.exists() or not source_path.is_dir():
@@ -12,11 +13,23 @@ def build_template(image: TemplateImage, source_path: Path, force: bool = False,
     if not original_metadata_path.exists():
         raise FileNotFoundError(f"Missing 'template.json' in source template folder: {source_path}")
 
+    # computing/setting metadata
     metadata = TemplateMetadata.load(original_metadata_path)
     metadata.category = image.category
     metadata.name = image.name
     metadata.version = image.version
+    metadata.created = datetime.utcnow().isoformat() + "Z"
+    metadata.hash = compute_template_hash(source_path)
 
+    total_size = 0
+    for f in source_path.rglob("*"):
+        if f.name == "template.json" or not f.is_file():
+            continue
+        total_size += f.stat().st_size
+
+    metadata.size = total_size
+
+    # get template path by image name
     target_path = get_local_image_path(image)
 
     if target_path.exists():

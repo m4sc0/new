@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 from typing import Tuple, List
 from template_metadata import TemplateMetadata
@@ -8,6 +9,22 @@ def safe_version(v: str):
         return Version(v)
     except InvalidVersion:
         return Version("0.0.0")
+
+def compute_template_hash(template_path: Path) -> str:
+    hash_obj = hashlib.sha256()
+
+    for file in sorted(template_path.rglob("*")):
+        if file.name == "template.json" or not file.is_file():
+            continue
+
+        rel_path = file.relative_to(template_path).as_posix()
+        hash_obj.update(rel_path.encode("utf-8"))
+
+        with file.open("rb") as f:
+            while chunk := f.read(8192):
+                hash_obj.update(chunk)
+
+    return hash_obj.hexdigest()[:32]
 
 class TemplateImage:
     def __init__(self, category: str, name: str, version: str) -> None:
