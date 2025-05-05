@@ -14,6 +14,7 @@ A CLI tool to create new projects or files from versioned template images.
 - Secure upload via token prompt
 - Cache-based architecture (`~/.cache/new/templates`)
 - `$EDITOR` support to open main file after creation (optional)
+- `Rich` text output using the `rich` python module ([Github](https://github.com/Textualize/rich))
 
 ## 📦 Installation
 
